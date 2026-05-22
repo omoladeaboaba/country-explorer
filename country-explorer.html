@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Country Explorer — ES6 Case Study</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f4f0;
+      --surface: #ffffff;
+      --surface2: #f0eeea;
+      --border: #e2dfd8;
+      --text: #1a1916;
+      --muted: #6b6860;
+      --accent: #2c5f8a;
+      --accent-light: #e8f1f8;
+      --green: #2d6a4f;
+      --green-light: #e8f4ee;
+      --red: #9b2226;
+      --red-light: #fdf0f0;
+      --amber: #7d4e00;
+      --amber-light: #fef3e2;
+      --tag-bg: #edecea;
+      --radius: 10px;
+      --radius-sm: 6px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+    }
+    header h1 { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; }
+    header span { font-size: 0.8rem; color: var(--muted); background: var(--tag-bg); padding: 3px 10px; border-radius: 20px; }
+
+    .layout { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; padding: 1.5rem 2rem; max-width: 1300px; margin: 0 auto; }
+
+    .left { display: flex; flex-direction: column; gap: 1.25rem; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+      box-shadow: var(--shadow);
+    }
+    .stat-card .label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.35rem; }
+    .stat-card .value { font-size: 1.4rem; font-weight: 600; letter-spacing: -0.03em; }
+    .stat-card .sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+
+    .controls {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: var(--shadow);
+      flex-wrap: wrap;
+    }
+    .controls label { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+    .controls select, .controls input[type="text"] {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem;
+      padding: 0.4rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+    }
+    .controls select:focus, .controls input:focus { border-color: var(--accent); }
+    .controls input[type="text"] { width: 200px; }
+
+    .btn-group { display: flex; gap: 0.5rem; margin-left: auto; }
+    .btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      padding: 0.4rem 0.9rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      background: var(--bg);
+      color: var(--text);
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .btn:hover { background: var(--surface2); border-color: #ccc; }
+    .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    #country-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.85rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.2rem;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.15s, transform 0.15s;
+      cursor: default;
+    }
+    .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-1px); }
+    .card-top { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.75rem; }
+    .flag { font-size: 1.6rem; line-height: 1; }
+    .card-name { font-size: 0.95rem; font-weight: 600; }
+    .card-continent { font-size: 0.72rem; color: var(--muted); }
+    .card-row { display: flex; justify-content: space-between; font-size: 0.78rem; padding: 0.3rem 0; border-top: 1px solid var(--border); color: var(--muted); }
+    .card-row span:last-child { color: var(--text); font-weight: 500; }
+    .badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+      margin-top: 0.6rem;
+    }
+    .badge.high { background: var(--green-light); color: var(--green); }
+    .badge.mid  { background: var(--amber-light); color: var(--amber); }
+    .badge.low  { background: var(--red-light); color: var(--red); }
+
+    .no-results { padding: 2rem; text-align: center; color: var(--muted); font-size: 0.9rem; }
+
+    .console-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      position: sticky;
+      top: 1.5rem;
+      align-self: start;
+    }
+    .console-header {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .console-titlebar {
+      background: #1e1e1e;
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.red { background: #ff5f57; }
+    .dot.yellow { background: #ffbd2e; }
+    .dot.green { background: #28c840; }
+    .console-title { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #888; margin-left: 0.5rem; }
+
+    #console-output {
+      background: #1e1e1e;
+      padding: 0.75rem 1rem 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.73rem;
+      line-height: 1.65;
+      color: #d4d4d4;
+      max-height: 520px;
+      overflow-y: auto;
+      min-height: 200px;
+    }
+    #console-output .line { margin-bottom: 1px; }
+    #console-output .cmd  { color: #569cd6; }
+    #console-output .val  { color: #ce9178; }
+    #console-output .num  { color: #b5cea8; }
+    #console-output .key  { color: #9cdcfe; }
+    #console-output .gray { color: #6a9955; }
+    #console-output .sep  { color: #555; border-top: 1px solid #333; margin: 4px 0; padding-top: 4px; }
+
+    .console-btns {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      box-shadow: var(--shadow);
+    }
+    .console-btns p { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.25rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+    .console-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      padding: 0.45rem 0.75rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      background: var(--bg);
+      color: var(--text);
+      text-align: left;
+      transition: background 0.15s;
+    }
+    .console-btn:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .console-btn .method { color: var(--accent); font-weight: 500; }
+
+    .tag-strip {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      padding: 0.75rem 2rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .es6-tag {
+      font-size: 0.7rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-weight: 500;
+    }
+    .es6-tag.used { background: var(--accent); color: #fff; }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌍 Country Explorer</h1>
+</header>
+
+<div class="tag-strip">
+  <span class="es6-tag used">const / let</span>
+  <span class="es6-tag used">arrow functions =&gt;</span>
+  <span class="es6-tag used">Array.map()</span>
+  <span class="es6-tag used">Array.filter()</span>
+  <span class="es6-tag used">Array.reduce()</span>
+  <span class="es6-tag used">Array.forEach()</span>
+  <span class="es6-tag used">Objects {}</span>
+  <span class="es6-tag used">Block scope</span>
+</div>
+
+<div class="layout">
+  <div class="left">
+    <div class="stats" id="stats-bar"></div>
+
+    <div class="controls">
+      <label>Continent</label>
+      <select id="filter-continent">
+        <option value="all">All continents</option>
+        <option value="Africa">Africa</option>
+        <option value="Asia">Asia</option>
+        <option value="Europe">Europe</option>
+        <option value="Americas">Americas</option>
+        <option value="Oceania">Oceania</option>
+      </select>
+
+      <label>Search</label>
+      <input type="text" id="search-input" placeholder="Country name..." />
+
+      <div class="btn-group">
+        <button class="btn active" id="btn-all" onclick="setPopFilter('all')">All</button>
+        <button class="btn" id="btn-large" onclick="setPopFilter('large')">Large (&gt;100M)</button>
+        <button class="btn" id="btn-small" onclick="setPopFilter('small')">Small (&lt;10M)</button>
+      </div>
+    </div>
+
+    <div id="country-grid"></div>
+  </div>
+
+  <div class="console-panel">
+    <div class="console-header">
+      <div class="console-titlebar">
+        <div class="dot red"></div>
+        <div class="dot yellow"></div>
+        <div class="dot green"></div>
+        <span class="console-title">console — ES6 demo</span>
+      </div>
+      <div id="console-output"></div>
+    </div>
+
+    <div class="console-btns">
+      <p>Run a demo</p>
+      <button class="console-btn" onclick="demoForEach()">
+        <span class="method">forEach()</span> — log all countries
+      </button>
+      <button class="console-btn" onclick="demoMap()">
+        <span class="method">map()</span> — extract names array
+      </button>
+      <button class="console-btn" onclick="demoFilter()">
+        <span class="method">filter()</span> — population &gt; 100M
+      </button>
+      <button class="console-btn" onclick="demoReduce()">
+        <span class="method">reduce()</span> — total world population
+      </button>
+      <button class="console-btn" onclick="demoScope()">
+        <span class="method">scope</span> — let vs var demo
+      </button>
+      <button class="console-btn" onclick="demoArrow()">
+        <span class="method">arrow fn</span> — sort by GDP
+      </button>
+      <button class="console-btn" onclick="clearConsole()">
+        <span style="color:#888">⌫ clear console</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<footer>Built with ES6 — const, let, arrow functions, map, filter, reduce, forEach, objects &amp; scope</footer>
+
+<script>
+  const countries = [
+    { name: "Nigeria",        flag: "🇳🇬", continent: "Africa",   population: 218.5, gdpPerCapita: 2184,  capital: "Abuja"         },
+    { name: "South Africa",   flag: "🇿🇦", continent: "Africa",   population: 60.1,  gdpPerCapita: 6994,  capital: "Pretoria"      },
+    { name: "Egypt",          flag: "🇪🇬", continent: "Africa",   population: 104.1, gdpPerCapita: 3699,  capital: "Cairo"         },
+    { name: "Kenya",          flag: "🇰🇪", continent: "Africa",   population: 54.0,  gdpPerCapita: 2082,  capital: "Nairobi"       },
+    { name: "Ethiopia",       flag: "🇪🇹", continent: "Africa",   population: 126.5, gdpPerCapita: 1020,  capital: "Addis Ababa"   },
+    { name: "Ghana",          flag: "🇬🇭", continent: "Africa",   population: 33.5,  gdpPerCapita: 2344,  capital: "Accra"         },
+
+    { name: "China",          flag: "🇨🇳", continent: "Asia",     population: 1412,  gdpPerCapita: 12720, capital: "Beijing"       },
+    { name: "India",          flag: "🇮🇳", continent: "Asia",     population: 1428,  gdpPerCapita: 2601,  capital: "New Delhi"     },
+    { name: "Japan",          flag: "🇯🇵", continent: "Asia",     population: 125.1, gdpPerCapita: 33950, capital: "Tokyo"         },
+    { name: "Indonesia",      flag: "🇮🇩", continent: "Asia",     population: 277.5, gdpPerCapita: 4798,  capital: "Jakarta"       },
+    { name: "Saudi Arabia",   flag: "🇸🇦", continent: "Asia",     population: 35.9,  gdpPerCapita: 23180, capital: "Riyadh"        },
+    { name: "South Korea",    flag: "🇰🇷", continent: "Asia",     population: 51.7,  gdpPerCapita: 32860, capital: "Seoul"         },
+
+    { name: "Germany",        flag: "🇩🇪", continent: "Europe",   population: 83.8,  gdpPerCapita: 48718, capital: "Berlin"        },
+    { name: "France",         flag: "🇫🇷", continent: "Europe",   population: 68.0,  gdpPerCapita: 43659, capital: "Paris"         },
+    { name: "United Kingdom", flag: "🇬🇧", continent: "Europe",   population: 67.7,  gdpPerCapita: 46125, capital: "London"        },
+    { name: "Italy",          flag: "🇮🇹", continent: "Europe",   population: 59.2,  gdpPerCapita: 35560, capital: "Rome"          },
+    { name: "Spain",          flag: "🇪🇸", continent: "Europe",   population: 47.4,  gdpPerCapita: 30090, capital: "Madrid"        },
+
+    { name: "United States",  flag: "🇺🇸", continent: "Americas", population: 335.0, gdpPerCapita: 80035, capital: "Washington DC" },
+    { name: "Brazil",         flag: "🇧🇷", continent: "Americas", population: 215.3, gdpPerCapita: 8917,  capital: "Brasília"      },
+    { name: "Mexico",         flag: "🇲🇽", continent: "Americas", population: 128.5, gdpPerCapita: 10948, capital: "Mexico City"   },
+    { name: "Canada",         flag: "🇨🇦", continent: "Americas", population: 38.8,  gdpPerCapita: 52720, capital: "Ottawa"        },
+    { name: "Argentina",      flag: "🇦🇷", continent: "Americas", population: 45.8,  gdpPerCapita: 13690, capital: "Buenos Aires"  },
+
+    { name: "Australia",      flag: "🇦🇺", continent: "Oceania",  population: 26.5,  gdpPerCapita: 64490, capital: "Canberra"      },
+    { name: "New Zealand",    flag: "🇳🇿", continent: "Oceania",  population: 5.1,   gdpPerCapita: 48780, capital: "Wellington"    },
+  ];
+
+  let activeContinent = "all";  
+  let activePopFilter = "all";
+  let searchTerm = "";
+
+  const getFiltered = () => {
+    return countries.filter(c => {
+      const matchContinent = activeContinent === "all" || c.continent === activeContinent;
+      const matchSearch    = c.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchPop = activePopFilter === "all"
+        ? true
+        : activePopFilter === "large" ? c.population > 100
+        : c.population < 10;
+      return matchContinent && matchSearch && matchPop;
+    });
+  };
+
+  const gdpBadge = (gdp) => {
+    if (gdp > 30000) return { cls: "high", label: "High income" };
+    if (gdp > 10000) return { cls: "mid",  label: "Mid income"  };
+    return              { cls: "low",  label: "Low income"  };
+  };
+
+  const renderCards = () => {
+    const filtered = getFiltered();
+    const grid = document.getElementById("country-grid");
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<p class="no-results">No countries match your filters.</p>`;
+      renderStats(filtered);
+      return;
+    }
+
+    const cards = filtered.map(c => {
+      const badge = gdpBadge(c.gdpPerCapita);
+      return `
+        <div class="card">
+          <div class="card-top">
+            <span class="flag">${c.flag}</span>
+            <div>
+              <div class="card-name">${c.name}</div>
+              <div class="card-continent">${c.continent}</div>
+            </div>
+          </div>
+          <div class="card-row"><span>Capital</span><span>${c.capital}</span></div>
+          <div class="card-row"><span>Population</span><span>${c.population.toFixed(1)}M</span></div>
+          <div class="card-row"><span>GDP / capita</span><span>$${c.gdpPerCapita.toLocaleString()}</span></div>
+          <span class="badge ${badge.cls}">${badge.label}</span>
+        </div>`;
+    });
+
+    grid.innerHTML = cards.join("");
+    renderStats(filtered);
+  };
+
+  const renderStats = (filtered) => {
+    const count = filtered.length;
+
+    const totalPop = count > 0
+      ? filtered.reduce((acc, c) => acc + c.population, 0)
+      : 0;
+
+    const avgGDP = count > 0
+      ? filtered.reduce((acc, c) => acc + c.gdpPerCapita, 0) / count
+      : 0;
+
+    const richest = count > 0
+      ? filtered.reduce((prev, curr) => curr.gdpPerCapita > prev.gdpPerCapita ? curr : prev)
+      : null;
+
+    document.getElementById("stats-bar").innerHTML = `
+      <div class="stat-card">
+        <div class="label">Countries</div>
+        <div class="value">${count}</div>
+        <div class="sub">matching filters</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total Population</div>
+        <div class="value">${totalPop.toFixed(0)}M</div>
+        <div class="sub">via reduce()</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Avg GDP/capita</div>
+        <div class="value">$${Math.round(avgGDP).toLocaleString()}</div>
+        <div class="sub">via reduce()</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Highest GDP</div>
+        <div class="value">${richest ? richest.flag : "—"}</div>
+        <div class="sub">${richest ? richest.name : "—"}</div>
+      </div>`;
+  };
+
+  document.getElementById("filter-continent").addEventListener("change", e => {
+    activeContinent = e.target.value;  
+    renderCards();
+  });
+
+  document.getElementById("search-input").addEventListener("input", e => {
+    searchTerm = e.target.value;    
+    renderCards();
+  });
+
+  const setPopFilter = (val) => {
+    activePopFilter = val;
+    ["all","large","small"].forEach(id => {
+      document.getElementById("btn-" + id).classList.toggle("active", id === val);
+    });
+    renderCards();
+  };
+
+  //console
+  const consoleEl = document.getElementById("console-output");
+
+  const clog = (html) => {
+    consoleEl.innerHTML += `<div class="line">${html}</div>`;
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+    console.log("🌍 [Country Explorer] " + html.replace(/<[^>]+>/g, ""));
+  };
+  const csep = (label) => {
+    consoleEl.innerHTML += `<div class="line sep gray">// ── ${label}</div>`;
+  };
+  const clearConsole = () => { consoleEl.innerHTML = ""; };
+
+  const demoForEach = () => {
+    clearConsole();
+    csep("forEach() — iterating every country");
+    countries.forEach(c => {
+      clog(`<span class="key">${c.flag} ${c.name}</span> <span class="gray">—</span> <span class="val">${c.continent}</span> <span class="gray">pop:</span> <span class="num">${c.population}M</span>`);
+    });
+  };
+
+  const demoMap = () => {
+    clearConsole();
+    csep("map() — extract names into new array");
+    const names = countries.map(c => c.name);
+    clog(`<span class="gray">// returns a new array, original untouched</span>`);
+    clog(`<span class="cmd">const names = countries.map(c => c.name)</span>`);
+    clog(`<span class="gray">// result:</span>`);
+    names.forEach((n, i) => clog(`<span class="num">[${i}]</span> <span class="val">"${n}"</span>`));
+  };
+
+  const demoFilter = () => {
+    clearConsole();
+    csep("filter() — population > 100M");
+    clog(`<span class="cmd">countries.filter(c => c.population > 100)</span>`);
+    clog(`<span class="gray">// result:</span>`);
+    const large = countries.filter(c => c.population > 100);
+    large.forEach(c => clog(`<span class="key">${c.flag} ${c.name}</span> <span class="num">${c.population.toFixed(1)}M</span>`));
+    clog(`<span class="gray">// found ${large.length} countries</span>`);
+  };
+
+  const demoReduce = () => {
+    clearConsole();
+    csep("reduce() — total world population");
+    clog(`<span class="cmd">countries.reduce((acc, c) => acc + c.population, 0)</span>`);
+    const total = countries.reduce((acc, c) => acc + c.population, 0);
+    clog(`<span class="gray">// accumulator starts at </span><span class="num">0</span>`);
+    clog(`<span class="gray">// adds each country's population...</span>`);
+    clog(`<span class="gray">// final result:</span> <span class="num">${total.toFixed(1)}M</span> <span class="gray">people</span>`);
+
+    csep("reduce() — richest country");
+    const richest = countries.reduce((prev, curr) => curr.gdpPerCapita > prev.gdpPerCapita ? curr : prev);
+    clog(`<span class="gray">// result:</span> <span class="key">${richest.flag} ${richest.name}</span> <span class="gray">$</span><span class="num">${richest.gdpPerCapita.toLocaleString()}</span><span class="gray">/capita</span>`);
+  };
+
+  const demoScope = () => {
+    clearConsole();
+    csep("scope — let vs var (block scope)");
+    clog(`<span class="gray">// var leaks outside blocks:</span>`);
+    clog(`<span class="cmd">if (true) { var x = "I leaked!" }</span>`);
+    clog(`<span class="gray">// console.log(x) outside block =></span> <span class="val">"I leaked!"</span>`);
+    clog(`&nbsp;`);
+    clog(`<span class="gray">// let stays inside the block:</span>`);
+    clog(`<span class="cmd">if (true) { let y = "I stay here" }</span>`);
+    clog(`<span class="gray">// console.log(y) outside block =></span> <span class="val">ReferenceError</span>`);
+    clog(`&nbsp;`);
+    clog(`<span class="gray">// const — cannot be reassigned:</span>`);
+    clog(`<span class="cmd">const countries = [...]  // defined once</span>`);
+    clog(`<span class="gray">// countries = []  would throw TypeError</span>`);
+
+    if (true) { var scopeVar = "var leaked!"; }
+    console.log("var outside block:", scopeVar);
+    try {
+      if (true) { let scopeLet = "let stays"; }
+      console.log(scopeLet);
+    } catch(e) {
+      console.log("let outside block: ReferenceError ✓");
+    }
+  };
+
+  const demoArrow = () => {
+    clearConsole();
+    csep("arrow functions — sort by GDP");
+    clog(`<span class="gray">// regular function:</span>`);
+    clog(`<span class="cmd">function compare(a, b) { return b.gdpPerCapita - a.gdpPerCapita }</span>`);
+    clog(`<span class="gray">// same thing as arrow function:</span>`);
+    clog(`<span class="cmd">(a, b) => b.gdpPerCapita - a.gdpPerCapita</span>`);
+    clog(`&nbsp;`);
+    clog(`<span class="gray">// sorted result (top 6):</span>`);
+    const sorted = [...countries].sort((a, b) => b.gdpPerCapita - a.gdpPerCapita);
+    sorted.slice(0, 6).forEach((c, i) =>
+      clog(`<span class="num">#${i+1}</span> <span class="key">${c.flag} ${c.name}</span> <span class="gray">$</span><span class="num">${c.gdpPerCapita.toLocaleString()}</span>`)
+    );
+  };
+
+  renderCards();
+  csep("ready — click a demo button above");
+  clog(`<span class="gray">// ${countries.length} countries loaded</span>`);
+  clog(`<span class="gray">// use the buttons to run ES6 demos</span>`);
+</script>
+</body>
+</html>
